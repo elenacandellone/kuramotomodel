@@ -1,5 +1,5 @@
-// Kuramoto model (sincronizzazione di n oscillatori) 
-// utilizzo gli header tratti dal libro Numerical Recipes (3rd edition)
+// Kuramoto model (Synchronization of N oscillators) 
+// headers from Numerical Recipes (3rd edition)
 #include <iostream>
 #include <iomanip>
 #include <cmath>
@@ -13,28 +13,28 @@
 
 using namespace std;
 
-const int n = 4;  				// numero di oscillatori
-double omega_array[n];  			// array delle omega 
-int time_int = 1200; 				// tempo d'integrazione
-double K = 0.2;					// coupling const.
+const int n = 4;		// number of oscillators
+double omega_array[n];  	// omega's array
+int time_int = 1200; 		// integration time
+double K = 0.2;			// coupling parameter
 int counts = 0;
 
-// all'interno della struttura derivates è presente il set di n equazioni differenziali
+// set of n differential equations
 struct derivates{
 	derivates(){};
 	void operator()(const double& t, const VecDoub &yvector, VecDoub &dydx){
 		int i = 0;
 		int k = 0;
 		counts++;																	
-		for(i = 0; i < n; i++){	// due cicli for che realizzano il modello di Kuramoto
+		for(i = 0; i < n; i++){	
 			dydx[i] = omega_array[i];
 			for(k = 0; k < n; k++){
 				dydx[i] += K/n * sin(yvector[k] - yvector[i]);
 			}
-		}
+		}		// 2 for loops in order to realize Kuramoto model
 	}
 };
-Doub zero_2_PI(Doub x){			// funzione che permette di avere angoli compresi tra 0 e 2pi
+Doub zero_2_PI(Doub x){		// phases between 0 and 2pi
 	while(x <= 0){
 		x += 2.0*M_PI;
 	}
@@ -44,58 +44,58 @@ Doub zero_2_PI(Doub x){			// funzione che permette di avere angoli compresi tra 
 }
 
 int main(){
-	const int N = n;										// inizo il main con una carrellata di declarations
-	Doub x1 = 0.0, x2 = 0.0, dx = 0.003;					// estremi d'integrazione, stepsize
-	Doub atol = 1e-12, rtol = 1e-12, stepmin = 1e-18;			// abs e rel tolerances, stepsize minima
-	Doub x1max = time_int * dx;							// stepsize * tempo d'integrazione
-	VecDoub ystart(N);									// vettore di stati iniziali
+	const int N = n;					
+	Doub x1 = 0.0, x2 = 0.0, dx = 0.003;			// integration boundaries, stepsize
+	Doub atol = 1e-12, rtol = 1e-12, stepmin = 1e-18;	// abs e rel tolerances, min stepsize 
+	Doub x1max = time_int * dx;				// stepsize * integration time
+	VecDoub ystart(N);					// initial states array
 	int i = 0;
-	ofstream omega("omega.csv");							// scrivo le omega su un file esterno
-	ofstream phase("phases.csv");							// scrivo le fasi su un file esterno
-	std:: default_random_engine gen;							// genero una distribuzione normale di pulsazioni
+	ofstream omega("omega.csv");				// write omegas on omega.csv
+	ofstream phase("phases.csv");				// write phases on phases.csv
+	std:: default_random_engine gen;			// random normal distribution of frequencies
 	std:: normal_distribution<double> norm(2.5,1.0);
-	for(i=0; i<n;i++){										// riempio l'array delle pulsazioni
+	for(i=0; i<n;i++){										
 		omega_array[i]=norm(gen);
-		omega << omega_array[i] <<" "<<endl;			// stampo su outfile_w l'array delle pulsazioni
+		omega << omega_array[i] <<" "<<endl;			
 	}
-	std::default_random_engine gen2;							// genero una distribuzione uniforme di angoli tra 0 e 2pi
+	std::default_random_engine gen2;			// uniform distribution of phases between 0 and 2pi
 	std::uniform_real_distribution<double> unif(0,2*M_PI);
-	for(i=0; i<n;i++){										// riempio l'array delle fasi
+	for(i=0; i<n;i++){									
 		ystart[i]=unif(gen2);
-		phase<< ystart[i] <<" "<<endl;					// stampo su outfile_p l'array delle fasi
+		phase<< ystart[i] <<" "<<endl;					
 	}
 	omega . close();
 	phase . close();
 	counts = 0;										
-	ofstream trajectory("trajectory.csv");						// traiettoria, parametro d'ordine e il suo modulo
+	ofstream trajectory("trajectory.csv");			
 	ofstream order_1("order.csv");
 	ofstream order_2("Rorder.csv");	
-	for( x1 = 0; x1 < x1max; x1 += dx){					// inizia un ciclo for che aggiunge la stepsize ad x1 fino ad arrivare a runtime*stepsize
-		x2 = x1 + dx;									// integro sempre tra x1 e x1+dx=x2
+	for( x1 = 0; x1 < x1max; x1 += dx){			
+		x2 = x1 + dx;				// int. boundaries are x1 and x1+dx=x2
 		cout << "time: " << x1 << " " << x2 << endl; 	
 		derivates d;
-		Output out(10);									// Output è l'oggetto che mi fa prendere valori intermedi
+		Output out(10);				// Output is an object that takes intermediate values
 		Odeint <StepperDopr5<derivates> > ode(ystart, x1, x2, atol ,rtol ,dx ,stepmin , out, d);
-		ode.integrate();									// integrazione del set di equazioni differenziali
+		ode.integrate();			// integration of differential eqs.
 		for(i = 0; i < n; i++){
-			ystart[i] = zero_2_PI(ystart[i]);					// scrivo le fasi tra 0 e 2pi	
+			ystart[i] = zero_2_PI(ystart[i]);	// phases between 0 and 2pi
 		}
-		trajectory << x1;									// stampo le x1 in trajectory (tempo iniziale)
+		trajectory << x1;			// lower bound printed on trajectory.csv
 		complex<double> im = -1;
-		im = sqrt(im);									// introduco l'unità immaginaria
+		im = sqrt(im);				// imaginary unit
 		for(i = 0; i < n; i++){
-			trajectory << "," << ystart[i] ;					// mi stampa ystart su trajectory 
+			trajectory << "," << ystart[i] ;	// new phases printed on trajectory 
 		}
 		trajectory << endl;
-		complex<double> order = exp(im * ystart[0]);			// calcolo il parametro d'ordine
+		complex<double> order = exp(im * ystart[0]);	// order parameter
 		for(i = 1; i < n; i++){
 			order += exp(im * ystart[i]);
 		}
-		double realorder = real(order) / n;					// parte reale
-		double imagorder = imag(order) / n;					// parte immaginaria
-		double order1 = sqrt(realorder * realorder + imagorder * imagorder);  	// modulo
+		double realorder = real(order) / n;					// real part
+		double imagorder = imag(order) / n;					// imaginary part
+		double order1 = sqrt(realorder * realorder + imagorder * imagorder);  	// module
 		order_1 << x1 << ","<< realorder << ","<< imagorder <<endl;
-		order_2 << x1 <<","<< order1 << endl;							// stampo parte reale e imm. su order.dat, il modulo su Roder.dat
+		order_2 << x1 <<","<< order1 << endl;					
 	}
 	trajectory.close();
 	order_1.close();
